@@ -5,15 +5,17 @@ const _ = require("lodash");
 const fs = require("fs");
 
 exports.productById = (req, res, next, id) => {
-  Product.findById(id).exec((err, product) => {
-    if (err || !product) {
-      return res.status(400).json({
-        message: "Product not found!"
-      });
-    }
-    req.product = product;
-    next();
-  });
+  Product.findById(id)
+    .populate("category")
+    .exec((err, product) => {
+      if (err || !product) {
+        return res.status(400).json({
+          error_message: "Product not found!"
+        });
+      }
+      req.product = product;
+      next();
+    });
 };
 
 exports.read = (req, res) => {
@@ -26,7 +28,9 @@ exports.create = (req, res) => {
   form.keepExtensions = true;
   form.parse(req, (err, fields, file) => {
     if (err) {
-      return res.status(400).json({ message: "Image could not be uploaded" });
+      return res
+        .status(400)
+        .json({ error_message: "Image could not be uploaded" });
     }
 
     //check for all fields
@@ -40,7 +44,7 @@ exports.create = (req, res) => {
       !quantity
     ) {
       return res.status(400).json({
-        message: "All fields are required"
+        error_message: "All fields are required"
       });
     }
 
@@ -51,7 +55,7 @@ exports.create = (req, res) => {
       if (file.photo.size > 1000000) {
         return res
           .status(400)
-          .json({ message: "Image should be less than 1Mb in size" });
+          .json({ error_message: "Image should be less than 1Mb in size" });
       }
 
       product.photo.data = fs.readFileSync(file.photo.path);
@@ -61,7 +65,7 @@ exports.create = (req, res) => {
     product.save((err, result) => {
       if (err) {
         return res.status(400).json({
-          error: errorHandler(err)
+          error_message: errorHandler(err)
         });
       }
       res.json(result);
@@ -74,10 +78,12 @@ exports.update = (req, res) => {
   form.keepExtensions = true;
   form.parse(req, (err, fields, file) => {
     if (err) {
-      return res.status(400).json({ message: "Image could not be uploaded" });
+      return res
+        .status(400)
+        .json({ error_message: "Image could not be uploaded" });
     }
     //check for all fields
-    const { name, description, price, category, shipping, quantity } = fields;
+    /*const { name, description, price, category, shipping, quantity } = fields;
     if (
       !name ||
       !description ||
@@ -87,10 +93,10 @@ exports.update = (req, res) => {
       !quantity
     ) {
       return res.status(400).json({
-        message: "All fields are required"
+        error_message: "All fields are required"
       });
     }
-
+*/
     let product = req.product;
     product = _.extend(product, fields);
     //files.photo photo is the name of the field that will be sent from the front end.
@@ -99,7 +105,7 @@ exports.update = (req, res) => {
       if (file.photo.size > 1000000) {
         return res
           .status(400)
-          .json({ message: "Image should be less than 1Mb in size" });
+          .json({ error_message: "Image should be less than 1Mb in size" });
       }
       product.photo.data = fs.readFileSync(file.photo.path);
       product.photo.contentType = file.photo.type;
@@ -108,7 +114,7 @@ exports.update = (req, res) => {
     product.save((err, result) => {
       if (err) {
         return res.status(400).json({
-          error: errorHandler(err)
+          error_message: errorHandler(err)
         });
       }
       res.json(result);
@@ -132,7 +138,7 @@ exports.list = (req, res) => {
     .exec((err, productList) => {
       if (err) {
         return res.status(400).json({
-          message: "There is no products!"
+          error_message: "There is no products!"
         });
       }
       res.status(200).json({
@@ -156,7 +162,7 @@ exports.listRelated = (req, res) => {
     .exec((err, relatedProduct) => {
       if (err || !relatedProduct) {
         res.status(400).json({
-          message: "Related products not found"
+          error_message: "Related products not found"
         });
       }
       res.status(201).json({
@@ -169,7 +175,7 @@ exports.listCategories = (req, res) => {
   Product.distinct("category", {}, (err, category) => {
     if (err) {
       res.status(400).json({
-        message: "Categories not found!"
+        error_message: "Categories not found!"
       });
     }
     res.status(200).json({
@@ -212,7 +218,7 @@ exports.listBySearch = (req, res) => {
     .exec((err, data) => {
       if (err) {
         return res.status(400).json({
-          message: "Products not found"
+          error_message: "Products not found"
         });
       }
       res.json({
@@ -225,6 +231,7 @@ exports.listBySearch = (req, res) => {
 exports.photo = (req, res, next) => {
   if (req.product.photo.data) {
     res.set("Content-Type", req.product.photo.contentType);
+    //return res.json(req.product.photo.data);
     return res.send(req.product.photo.data);
   }
   next();
@@ -235,11 +242,54 @@ exports.remove = (req, res) => {
   product.remove((err, deletedProduct) => {
     if (err) {
       return res.status(400).json({
-        error: errorHandler(err)
+        error_message: errorHandler(err)
       });
     }
     res.status(200).json({
       message: "Product successfully deleted"
     });
+  });
+};
+
+exports.listSearch = (req, res) => {
+  // create query object to hold search value and category value
+  const query = {};
+  //assign search value to query.name
+  if (req.query.search) {
+    query.name = { $regex: req.query.search, $options: "i" };
+    //assign category to query.category
+    if (req.query.category && req.query.category != "All") {
+      query.category = req.query.category;
+    }
+    //find product based on query object with 2 properties
+    //search and category
+
+    Product.find(query, (err, products) => {
+      if (err) {
+        return res.status(400).json({
+          error_message: errorHandler(err)
+        });
+      }
+      res.status(200).json(products);
+    }).select("-photo");
+  }
+};
+exports.decreaseQuantity = (req, res, next) => {
+  let bulkOpts = req.body.order.products.map(item => {
+    return {
+      updateOne: {
+        filter: { _id: item._id },
+        update: { $inc: { quantity: -item.count, sold: +item.count } }
+      }
+    };
+  });
+
+  Product.bulkWrite(bulkOpts, {}, (error, product) => {
+    if (error) {
+      return res.status(400).json({
+        error_message: "Could not update the product"
+      });
+    }
+    next();
   });
 };

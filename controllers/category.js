@@ -6,7 +6,7 @@ exports.create = (req, res) => {
   const category = new Category(req.body);
   category.save((err, data) => {
     if (err) {
-      return res.status(400).json({ error: errorHandler });
+      return res.status(400).json({ error_message: errorHandler(err) });
     }
     res.status(200).json({ data });
   });
@@ -35,7 +35,7 @@ exports.update = (req, res) => {
   category.save((err, category) => {
     if (err) {
       return res.status(400).json({
-        error: errorHandler(err)
+        error_message: errorHandler(err)
       });
     }
     res.status(200).json({
@@ -49,7 +49,7 @@ exports.remove = (req, res) => {
   category.remove((err, category) => {
     if (err) {
       return res.status(400).json({
-        error: errorHandler(err)
+        error_message: errorHandler(err)
       });
     }
     res.status(200).json({

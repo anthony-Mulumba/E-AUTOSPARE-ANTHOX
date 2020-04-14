@@ -12,6 +12,8 @@ const authRoutes = require("./routes/auth");
 const userRoutes = require("./routes/user");
 const categoryRoutes = require("./routes/category");
 const productRoutes = require("./routes/product");
+const braintreeRoutes = require("./routes/braintree");
+const orderRoutes = require("./routes/order");
 const port = process.env.PORT || 8000;
 
 //db connection
@@ -38,13 +40,22 @@ app.use("/api", authRoutes);
 app.use("/api", userRoutes);
 app.use("/api", categoryRoutes);
 app.use("/api", productRoutes);
+app.use("/api", braintreeRoutes);
+app.use("/api", orderRoutes);
+
+//Wrong routes
+app.use((req, res, next) => {
+  const error = new Error("Path Not found");
+  error.status = 404;
+  next(error);
+});
 
 //error handling
 app.use((error, req, res, next) => {
-  console.log(error);
+  //console.log(error);
   const status = error.statusCode || 500;
   const message = error.message;
-  res.status(status).json({ message: message });
+  res.status(status).json({ error_message: message });
 });
 
 app.listen(port, () => {

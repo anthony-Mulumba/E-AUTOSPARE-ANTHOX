@@ -23,8 +23,8 @@ exports.signup = (req, res, next) => {
   //Check whether email (user) already in the database.
   User.findOne({ email: email }).then(user => {
     if (user) {
-      const error = { message: "Email Already exist" };
-      return res.status(400).json({ message: error });
+      const error = "Email Already exist";
+      return res.status(400).json({ error_message: error });
     } else {
       const newUser = new User({
         name: name,
@@ -49,7 +49,7 @@ exports.signup = (req, res, next) => {
               if (!err.statusCode) {
                 err.statusCode = 500;
               }
-              console.log(err);
+              //console.log(err);
               next(err);
             });
         });
@@ -58,7 +58,7 @@ exports.signup = (req, res, next) => {
   });
 };
 
-exports.login = (req, res, next) => {
+exports.login = (req, res) => {
   const { errors, isValid } = validationLoginUser(req.body);
 
   if (!isValid) {
@@ -72,10 +72,9 @@ exports.login = (req, res, next) => {
 
   User.findOne({ email }).then(user => {
     if (!user) {
-      const error = {
-        message: "No user with that email address. Signup please"
-      };
-      return res.status(404).json({ message: error });
+      const error = "No user with that email address. Signup please";
+
+      return res.status(404).json({ error_message: error });
     }
 
     //Check the password with Bcrypt
@@ -102,7 +101,7 @@ exports.login = (req, res, next) => {
       } else {
         return res
           .status(401)
-          .json({ message: `Email and Password don't matched` });
+          .json({ error_message: `Email and Password don't matched` });
       }
     });
   });
@@ -121,14 +120,16 @@ exports.requireSignin = expressJwt({
 exports.isAuth = (req, res, next) => {
   let user = req.profile && req.auth && req.profile._id == req.auth._id;
   if (!user) {
-    return res.status(403).json({ message: "Access Denied" });
+    return res.status(403).json({ error_message: "Access Denied" });
   }
   next();
 };
 
 exports.isAdmin = (req, res, next) => {
   if (req.profile.role === 0) {
-    return res.status(403).json({ message: "Admin resources! Access Denied" });
+    return res
+      .status(403)
+      .json({ error_message: "Admin resources! Access Denied" });
   }
   next();
 };
